@@ -18,8 +18,12 @@ fn main() {
 
     for _ in 0..5 {g.push(a.clone())}
 
+    let entropy_solve_settings = EntropySolveSettings::new()
+        .attempts(1000)
+        .noise(0.5)
+        .final_attempt(Some(None));
     let solve_settings = SolveSettings::new();
-    if let Some(solution) = g.solve(solve_settings) {
+    if let (_n, Some(solution)) = g.solve(entropy_solve_settings, solve_settings) {
         // solution.puzzle.print();
         println!("{}", solution.puzzle.graphviz(
             "sfdp",

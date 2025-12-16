@@ -187,9 +187,11 @@ impl Puzzle for Graph {
         let n = self.nodes.len();
         for i in 0..n {
             for j in i+1..n {
-                let colors = self.colors((i, j));
-                if colors.len() == 1 {
-                    f(self, (i, j), colors[0]);
+                if self.get((i, j)) == 0 {
+                    let colors = self.colors((i, j));
+                    if colors.len() == 1 {
+                        f(self, (i, j), colors[0]);
+                    }
                 }
             }
         }
@@ -269,10 +271,12 @@ impl Graph {
         let n = self.nodes.len();
         for i in 0..n {
             for j in i..n {
-                let s = self.colors((i, j)).len();
-                if s == 0 {continue};
                 if self.get((i, j)) == 0 {
-                    return Some((i, j));
+                    let s = self.colors((i, j)).len();
+                    if s == 0 {continue};
+                    if self.get((i, j)) == 0 {
+                        return Some((i, j));
+                    }
                 }
             }
         }
@@ -285,11 +289,13 @@ impl Graph {
         let n = self.nodes.len();
         'outer: for i in 0..n {
             for j in i..n {
-                let s = self.colors((i, j)).len();
-                if s == 0 {continue};
-                if min.is_none() || min.unwrap().2 > s {
-                    min = Some((i, j, s));
-                    if s == 1 {break 'outer}
+                if self.get((i, j)) == 0 {
+                    let s = self.colors((i, j)).len();
+                    if s == 0 {return None};
+                    if min.is_none() || min.unwrap().2 > s {
+                        min = Some((i, j, s));
+                        if s == 1 {break 'outer}
+                    }
                 }
             }
         }
@@ -299,12 +305,22 @@ impl Graph {
     /// Solves the graph puzzle using default strategy.
     ///
     /// The default strategy is `Graph::min_colors, Graph::colors`.
-    pub fn solve(self, solve_settings: SolveSettings) -> Option<Solution<Graph>> {
-        let solver = BackTrackSolver::new(self, solve_settings);
-        solver.solve(
-            Graph::min_colors,
-            Graph::colors
-        )
+    ///
+    /// Returns the number of attempts and a solution (if it was found).
+    pub fn solve(
+        self,
+        entropy_settings: EntropySolveSettings,
+        solve_settings: SolveSettings
+    ) -> (u64, Option<Solution<Graph>>) {
+        let mut start = vec![];
+        let n = self.nodes.len();
+        for i in 0..n {
+            for j in i..n {
+                start.push(((i, j), self.colors((i, j))));
+            }
+        }
+        let mut solver = EntropyBackTrackSolver::new(self, start, entropy_settings, solve_settings);
+        solver.solve(Graph::colors)
     }
 
     /// Adds a node description.
@@ -545,7 +561,7 @@ impl Graph {
     /// Returns a list of possible actions for a node.
     pub fn colors(&self, (i, j): (usize, usize)) -> Vec<Color> {
         if self.get((i, j)) != 0 {return vec![]};
-        if !self.nodes[i].self_connected && i == j {return vec![]};
+        if !self.nodes[i].self_connected && i == j {return vec![1]};
         if self.no_triangles && self.has_triangles() {return vec![]};
         if self.connected && self.is_upper_right_disconnected() {return vec![]};
         if let Some(val) = self.commute_quad {if !self.commute_quad_satisfied(val) {return vec![]}};

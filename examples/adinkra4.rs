@@ -215,8 +215,12 @@ fn main() {
     // Require anticommutativity for every quad.
     g.commute_quad = Some(false);
 
+    let entropy_solve_settings = EntropySolveSettings::new()
+        .attempts(1000)
+        .noise(0.5)
+        .final_attempt(Some(None));
     let solve_settings = SolveSettings::new(); // .debug(true); // .sleep_ms(1000);
-    if let Some(solution) = g.solve(solve_settings) {
+    if let (_n, Some(solution)) = g.solve(entropy_solve_settings, solve_settings) {
         // solution.puzzle.print();
         // let nodes = &["black,fontcolor=white,label=\"\"", "white,label=\"\""];
         let nodes = &["black,fontcolor=white", "white"];
